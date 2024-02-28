@@ -190,6 +190,10 @@ impl Plugin for Sidebox { // Plugin implementation
 
         let aux_input = &mut _aux.inputs;
         let aux_input0 = &mut aux_input[0];
+        
+        // declare circular queue for envelope follower's moving average
+        let mut prev_left = CircularBuffer::<100, f32>::new();
+        let mut prev_right = CircularBuffer::<100, f32>::new();
 
         /* AuxiliaryBuffers definition
         pub struct AuxiliaryBuffers<'a> {
@@ -205,10 +209,6 @@ impl Plugin for Sidebox { // Plugin implementation
             let input_gain = self.params.input_gain.smoothed.next();
             let sidechain_input_gain = self.params.sidechain_input_gain.smoothed.next();
             let sidechain_phase_flip = self.params.sidechain_phase_flip.smoothed.next();
-            
-            // declare circular queue for envelope follower's moving average
-            let mut prev_left = CircularBuffer::<100, f32>::new();
-            let mut prev_right = CircularBuffer::<100, f32>::new();
 
             // Do processing
             match mode {
@@ -257,7 +257,9 @@ impl Plugin for Sidebox { // Plugin implementation
 
                 }
                 6 => {
-                        // circular buffer test (i hope this works) (Not finished)
+                        // circular buffer test (i hope this works)
+                        // (Not finished; why is the output just the sidechain signal?)
+                        // I need a way to iterate through the samples of individual channels
                         let mut rolling_avg = 0.0;
                         for (sample, sidechain_sample) in channel_samples.iter_mut().zip(sidechain_samples.iter_mut()) {
                             *sidechain_sample *= sidechain_input_gain;
