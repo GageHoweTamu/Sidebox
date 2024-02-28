@@ -300,18 +300,26 @@ impl Plugin for Sidebox { // Plugin implementation
                         pub im: T,
                     } */
 
-                    // CREATE A FORWARD FFT PLANNER
+                    // CREATE FFT PARAMETERS
                     let mut planner = FftPlanner::new();
                     let fft = planner.plan_fft_forward(32);
-                    let mut complex1 = vec![Complex{ re: 0.0f32, im: 0.0f32 }; 1024];
-                    fft.process(&mut buffer);
-
-                    // CREATE AN INVERSE FFT PLANNER
-                    
-                    let mut complex2 = vec![Complex{ re: 0.0f32, im: 0.0f32 }; 1024];
-
                     let invfft = planner.plan_fft_inverse(32);
-                    invfft.process(&mut _aux.inputs);
+                    
+                    // initialize complex number vectors
+                    let mut complex1 = vec![Complex{ re: 0.0f32, im: 0.0f32 }; 32];
+                    let mut complex2 = vec![Complex{ re: 0.0f32, im: 0.0f32 }; 32];
+
+                    // fill complex number vectors with samples
+                    for (i, sample) in sidechain_samples.iter_mut().enumerate() {
+                        complex1[i] = Complex{ re: *sample, im: 0.0f32 };
+                    }
+                    for (i, sample) in channel_samples.iter_mut().enumerate() {
+                        complex2[i] = Complex{ re: *sample, im: 0.0f32 };
+                    }
+
+                    // do forward and inverse fft
+                    fft.process(&mut complex1);
+                    invfft.process(&mut complex2);
 
                 }
 
