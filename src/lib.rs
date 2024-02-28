@@ -10,8 +10,9 @@ use circular_buffer::CircularBuffer;
 //use nih_plug_egui::create_egui_editor;
 //use crate::egui::Window;
 
-// rustfft = "6.2.0"
 // dasp = "0.11.0"
+
+use rustfft::{FftPlanner, num_complex::Complex};
 
 mod other_stuff;
 use other_stuff::SimpleEnvelopeFollower;
@@ -192,8 +193,8 @@ impl Plugin for Sidebox { // Plugin implementation
         let aux_input0 = &mut aux_input[0];
         
         // declare circular queue for envelope follower's moving average
-        let mut prev_left = CircularBuffer::<100, f32>::new();
-        let mut prev_right = CircularBuffer::<100, f32>::new();
+        let mut _prev_left = CircularBuffer::<100, f32>::new();
+        let mut _prev_right = CircularBuffer::<100, f32>::new();
 
         /* AuxiliaryBuffers definition
         pub struct AuxiliaryBuffers<'a> {
@@ -263,9 +264,9 @@ impl Plugin for Sidebox { // Plugin implementation
                         let mut rolling_avg = 0.0;
                         for (sample, sidechain_sample) in channel_samples.iter_mut().zip(sidechain_samples.iter_mut()) {
                             *sidechain_sample *= sidechain_input_gain;
-                            prev_outputs.push_back(*sidechain_sample);              // add the current sample
-                            let num = prev_outputs.len();                           // get length of buffer
-                            rolling_avg = prev_outputs.iter().sum::<f32>() / num as f32; // calculate the average
+                            _prev_left.push_back(*sidechain_sample);              // add the current sample
+                            let num = _prev_left.len();                           // get length of buffer
+                            rolling_avg = _prev_left.iter().sum::<f32>() / num as f32; // calculate the average
                             *sample = rolling_avg * output_gain;                    // set the output to the average
                         }
                     }
@@ -283,12 +284,45 @@ impl Plugin for Sidebox { // Plugin implementation
                 // convolution
                 // etc
 
+                7 => { // spectral vocoder - docs.rs/rustfft/latest/rustfft#usage
+
+                    /*
+                    pub struct Buffer<'a> {
+                        num_samples: usize,
+                        output_slices: Vec<&'a mut [f32]>,
+                    } */
+
+                    /*
+                    pub struct Complex<T> {
+                        /// Real portion of the complex number
+                        pub re: T,
+                        /// Imaginary portion of the complex number
+                        pub im: T,
+                    } */
+
+                    // CREATE A FORWARD FFT PLANNER
+                    let mut planner = FftPlanner::new();
+                    let fft = planner.plan_fft_forward(32);
+                    let mut complex1 = vec![Complex{ re: 0.0f32, im: 0.0f32 }; 1024];
+                    fft.process(&mut buffer);
+
+                    // CREATE AN INVERSE FFT PLANNER
+                    
+                    let mut complex2 = vec![Complex{ re: 0.0f32, im: 0.0f32 }; 1024];
+
+                    let invfft = planner.plan_fft_inverse(32);
+                    invfft.process(&mut _aux.inputs);
+
+                }
+
                 _ => { // testing ground
+
+                    /* how do to something like this? I can't index into a specific channel
                     for sample in buffer.iter_samples() {
                         let left_sample = sample[0];
                         let right_sample = sample[1];
                         left_sample *= input_gain;
-                    }
+                    } */
                 }
             }
         

@@ -24,6 +24,7 @@ nih_plug = { git = "https://github.com/robbert-vdh/nih-plug.git", features = ["a
 # nih_plug = { git = "https://github.com/robbert-vdh/nih-plug.git", default_features = false, features = ["assert_process_allocs"] }
 nih_plug_egui = { git = "https://github.com/robbert-vdh/nih-plug.git" }
 circular-buffer = "0.1.6"
+rustfft = "6.2.0"
 
 [profile.release]
 lto = "thin"
