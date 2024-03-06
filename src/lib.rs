@@ -1,5 +1,9 @@
+// compile/build with cargo xtask bundle sidebox --release
+
 use nih_plug::prelude::*;
+use core::num;
 use std::{os::raw, sync::Arc};
+use nih_plug::buffer::ChannelSamples;
 
 #[allow(unused_imports)]
 use core::f32::consts::PI;
@@ -190,12 +194,7 @@ impl Plugin for Sidebox { // Plugin implementation
     ) -> ProcessStatus {
 
         let raw_buffer = buffer.as_slice();
-        let aux_input0 = _aux.inputs[0].clone().as_slice();
-        let aux_input1 = _aux.inputs[1].clone().as_slice();
-        
-        // declare circular queue for envelope follower's moving average
-        let mut _prev_left = CircularBuffer::<100, f32>::new();
-        let mut _prev_right = CircularBuffer::<100, f32>::new();
+        let aux_input0 = _aux.inputs[0].as_slice();
 
         /* AuxiliaryBuffers definition
         pub struct AuxiliaryBuffers<'a> {
@@ -232,18 +231,6 @@ impl Plugin for Sidebox { // Plugin implementation
                         *sample *= output_gain;
                     }
                 }
-                4 => { // Simple envelope follower (not working)
-                    let mut envelope_follower = SimpleEnvelopeFollower::new(
-                        self.params.envelope_follower_smoothing.smoothed.next(),
-                    );
-                    for (sample, sidechain_sample) in channel_samples.iter_mut().zip(sidechain_samples.iter_mut()) {
-                        *sample *= input_gain;
-                        *sidechain_sample *= sidechain_input_gain;
-                        let envelope = envelope_follower.process(*sidechain_sample);
-                        *sample *= envelope; // envelope should range from 0 to 1, where 1 is the maximum amplitude
-                        *sample *= output_gain;
-                    }
-                }
                 3 => { // modulo (DONE)
                     for (sample, sidechain_sample) in channel_samples.iter_mut().zip(sidechain_samples.iter_mut()) {
                         *sidechain_sample *= sidechain_input_gain;
@@ -257,22 +244,22 @@ impl Plugin for Sidebox { // Plugin implementation
                         *sample = *sample * input_gain * (*sidechain_sample).abs() * sidechain_input_gain
                     }
                 }
-                5 => { // outputs sidechain as a modulator
-
-                }
-                6 => {
-                        // circular buffer test (i hope this works)
-                        // (Not finished; why is the output just the sidechain signal?)
-                        // I need a way to iterate through the samples of individual channels
-                        let mut rolling_avg = 0.0;
-                        for (sample, sidechain_sample) in channel_samples.iter_mut().zip(sidechain_samples.iter_mut()) {
-                            *sidechain_sample *= sidechain_input_gain;
-                            _prev_left.push_back(*sidechain_sample);              // add the current sample
-                            let num = _prev_left.len();                           // get length of buffer
-                            rolling_avg = _prev_left.iter().sum::<f32>() / num as f32; // calculate the average
-                            *sample = rolling_avg * output_gain;                    // set the output to the average
+                5 => { // sine -> saw
+                    let num_of_harmonics = 50;
+                
+                    for harmonic_number in 1..=num_of_harmonics {
+                        let mut skip_next = false;
+                        for (i, sample) in channel_samples.iter_mut().enumerate() {
+                            if skip_next {
+                                skip_next = false;
+                                continue;
+                            }
+                            // Add the harmonic to the current sample
+                            *sample += *sample / harmonic_number as f32;
+                            skip_next = harmonic_number != 1 && i % harmonic_number == 0;
                         }
                     }
+                }
                     /*
                     for (sample, sidechain_sample) in channel_samples.iter_mut().zip(sidechain_samples.iter_mut()) {
                         let envelope = self.follower.as_mut().unwrap().process(*sidechain_sample);
