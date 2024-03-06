@@ -1,5 +1,5 @@
 use nih_plug::prelude::*;
-use std::sync::Arc;
+use std::{os::raw, sync::Arc};
 
 #[allow(unused_imports)]
 use core::f32::consts::PI;
@@ -189,8 +189,9 @@ impl Plugin for Sidebox { // Plugin implementation
 
     ) -> ProcessStatus {
 
-        let aux_input = &mut _aux.inputs;
-        let aux_input0 = &mut aux_input[0];
+        let raw_buffer = buffer.as_slice();
+        let aux_input0 = _aux.inputs[0].clone().as_slice();
+        let aux_input1 = _aux.inputs[1].clone().as_slice();
         
         // declare circular queue for envelope follower's moving average
         let mut _prev_left = CircularBuffer::<100, f32>::new();
@@ -204,12 +205,14 @@ impl Plugin for Sidebox { // Plugin implementation
         */
     
         // Apply sidechain operation
-        for (mut channel_samples, mut sidechain_samples) in buffer.iter_samples().zip(aux_input0.iter_samples()) {
+        for (mut channel_samples, mut sidechain_samples) in buffer.iter_samples().zip(aux_input0.iter_mut()) {
             let mode = self.params.mode.smoothed.next();
             let output_gain = self.params.output_gain.smoothed.next();
             let input_gain = self.params.input_gain.smoothed.next();
             let sidechain_input_gain = self.params.sidechain_input_gain.smoothed.next();
             let sidechain_phase_flip = self.params.sidechain_phase_flip.smoothed.next();
+            let num_samples = channel_samples.len();
+            let num_sidechain_samples = sidechain_samples.len();
 
             // Do processing
             match mode {
@@ -299,38 +302,38 @@ impl Plugin for Sidebox { // Plugin implementation
                         /// Imaginary portion of the complex number
                         pub im: T,
                     } */
-
+/*
                     // CREATE FFT PARAMETERS
                     let mut planner = FftPlanner::new();
-                    let fft = planner.plan_fft_forward(32);
-                    let invfft = planner.plan_fft_inverse(32);
                     
-                    // initialize complex number vectors
-                    let mut complex1 = vec![Complex{ re: 0.0f32, im: 0.0f32 }; 32];
-                    let mut complex2 = vec![Complex{ re: 0.0f32, im: 0.0f32 }; 32];
+                    let mut complex_sc = vec![Complex{ re: 0.0f32, im: 0.0f32 }; num_sidechain_samples];
+                    let mut complex_main = vec![Complex{ re: 0.0f32, im: 0.0f32 }; num_samples];
 
-                    // fill complex number vectors with samples
                     for (i, sample) in sidechain_samples.iter_mut().enumerate() {
-                        complex1[i] = Complex{ re: *sample, im: 0.0f32 };
+                        complex_sc
+                        [i] = Complex{ re: *sample, im: 0.0f32 };
                     }
                     for (i, sample) in channel_samples.iter_mut().enumerate() {
-                        complex2[i] = Complex{ re: *sample, im: 0.0f32 };
+                        complex_main[i] = Complex{ re: *sample, im: 0.0f32 };
                     }
 
-                    // do forward and inverse fft
-                    fft.process(&mut complex1);
-                    invfft.process(&mut complex2);
+                    let fft = planner.plan_fft_forward(32);
+                    fft.process(&mut complex_sc);
 
-                }
+                    let invfft = planner.plan_fft_inverse(32);
+                    invfft.process(&mut complex_main);
+                    */
+                }   
 
                 _ => { // testing ground
 
-                    /* how do to something like this? I can't index into a specific channel
+                /* how do to something like this? I can't index into a specific channel
                     for sample in buffer.iter_samples() {
                         let left_sample = sample[0];
                         let right_sample = sample[1];
                         left_sample *= input_gain;
                     } */
+
                 }
             }
         
