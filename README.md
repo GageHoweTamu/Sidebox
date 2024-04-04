@@ -3,7 +3,7 @@
 ## Summary
 
 ### Sidebox is finished, for now! Download for free at https://9744033808956.gumroad.com/l/sidebox
-Build with the Nih-Plug library for Rust, which facilitates audio plugin compilation and real-timr audio processing.
+Built with the Nih-Plug library for Rust, which facilitates audio plugin compilation and real-time audio processing.
 
 ## Building
 
